@@ -17,6 +17,7 @@ public class DeckController : MonoBehaviour
     
     public GameObject GetNextCard()
     {
-        return cards[Random.Range(0, cards.Length)];
+        GameObject nextCard = cards[Random.Range(0, cards.Length)];
+        return GameObject.Instantiate(nextCard);
     }
 }
