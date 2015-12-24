@@ -4,6 +4,14 @@ using System.Collections.Generic;
 
 public class DealerController : MonoBehaviour
 {
+    public enum GameState
+    {
+        PlayerTurn,
+        JustBecameDealerTurn,
+        DealerTurn,
+        Over,
+    };
+    
     public DeckController deckController;
     public Transform dealerCardSpot;
     public Transform playerCardSpot;
@@ -14,6 +22,8 @@ public class DealerController : MonoBehaviour
     private IList<CardController> dealerCards;
     private IList<CardController> playerCards;
     private float cardDepth = 0.001f;
+    private GameState state;
+    
     
     // Use this for initialization
     void Start()
@@ -21,18 +31,41 @@ public class DealerController : MonoBehaviour
         dealerCards = new List<CardController>();
         playerCards = new List<CardController>();
         
-        StartCoroutine(DealCards());
+        dealInitialRound();
+        state = GameState.PlayerTurn;
     }
     
-    IEnumerator DealCards()
+    void Update()
     {
-        print("HO");
+        if (state == GameState.PlayerTurn)
+        {
+            if (Input.GetMouseButtonDown(0))
+            {
+                dealPlayerCard();
+            }
+            else if (Input.GetMouseButtonDown(1))
+            {
+                state = GameState.JustBecameDealerTurn;              
+            }
+        }
+        else if (state == GameState.JustBecameDealerTurn)
+        {
+            dealerCards[dealerCards.Count-1].flip();
+            state = GameState.DealerTurn;
+        }
+        else if (state == GameState.DealerTurn)
+        {
+            dealDealerCard(true);
+            state = GameState.Over; // testting purpose
+        }
+    }
+
+    void dealInitialRound()
+    {
         dealPlayerCard();
         dealDealerCard(true);
         dealPlayerCard();
         dealDealerCard(false);
-
-        yield return null;
     }
     
     void dealPlayerCard()
@@ -49,7 +82,7 @@ public class DealerController : MonoBehaviour
     void dealDealerCard(bool showCard)
     {
         var nextCard = deckController.GetNextCard().GetComponent<CardController>();
-        Vector3 cardPos = new Vector3(dealerCardSpot.position.x - (horiSpaceBetweenDealerCards * playerCards.Count), dealerCardSpot.position.y, dealerCardSpot.position.z);
+        Vector3 cardPos = new Vector3(dealerCardSpot.position.x - (horiSpaceBetweenDealerCards * dealerCards.Count), dealerCardSpot.position.y, dealerCardSpot.position.z);
         nextCard.transform.position = cardPos;
         if (showCard)
             nextCard.flip();
