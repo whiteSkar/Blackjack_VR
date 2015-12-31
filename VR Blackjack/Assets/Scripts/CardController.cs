@@ -14,4 +14,9 @@ public class CardController : MonoBehaviour
     {
         return value;
     }
+    
+    public void setValue(int value)
+    {
+        this.value = value;
+    }
 }

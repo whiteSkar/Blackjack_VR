@@ -12,6 +12,13 @@ public class DealerController : MonoBehaviour
         Over,
     };
     
+    public enum DealerState
+    {
+        MustHit,
+        MustStay,
+        Busted,
+    };
+    
     public DeckController deckController;
     public Transform dealerCardSpot;
     public Transform playerCardSpot;
@@ -55,9 +62,45 @@ public class DealerController : MonoBehaviour
         }
         else if (state == GameState.DealerTurn)
         {
-            dealDealerCard(true);
-            state = GameState.Over; // testting purpose
+            DealerState dealerState = GetDealerState();
+            if (dealerState == DealerState.MustStay || dealerState == DealerState.Busted)
+                state = GameState.Over; // testting purpose
+            else
+                dealDealerCard(true);
         }
+    }
+    
+    DealerState GetDealerState()
+    {
+        int sum = 0;
+        bool isSoft = false;
+        for (int i = 0; i < dealerCards.Count; i++)
+        {
+            int cardVal = dealerCards[i].getValue();
+            if (cardVal == 11)  // magic number
+                isSoft = true;
+            sum += dealerCards[i].getValue();
+        }
+        
+        if (sum > 21 && isSoft)   // magic number
+        {
+            for (int i = 0; i < dealerCards.Count; i++)
+            {
+                int cardVal = dealerCards[i].getValue();
+                if (cardVal == 11)  // magic number
+                {
+                    dealerCards[i].setValue(1);   // magic number
+                    break;
+                }
+            }
+        }
+        
+        if (sum < 17 || (sum == 17 && isSoft))   // magic number
+            return DealerState.MustHit;
+        else if (sum >= 17 && sum <= 21)    // magic number
+            return DealerState.MustStay;
+        else
+            return DealerState.Busted;
     }
 
     void dealInitialRound()
