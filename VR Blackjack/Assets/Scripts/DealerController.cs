@@ -10,6 +10,7 @@ public class DealerController : MonoBehaviour
         JustBecameDealerTurn,
         DealerTurn,
         Over,
+        Restarting,
     };
     
     public enum DealerState
@@ -38,8 +39,8 @@ public class DealerController : MonoBehaviour
         dealerCards = new List<CardController>();
         playerCards = new List<CardController>();
         
-        dealInitialRound();
-        state = GameState.PlayerTurn;
+        state = GameState.Restarting;
+        StartCoroutine(ResetRound(0.0f));
     }
     
     void Update()
@@ -48,7 +49,7 @@ public class DealerController : MonoBehaviour
         {
             if (Input.GetMouseButtonDown(0))
             {
-                dealPlayerCard();
+                DealPlayerCard();
                 if (GetPlayerSum() > 21)    // magic number
                     state = GameState.Over;
             }
@@ -68,7 +69,12 @@ public class DealerController : MonoBehaviour
             if (dealerState == DealerState.MustStay || dealerState == DealerState.Busted)
                 state = GameState.Over; // testting purpose
             else
-                dealDealerCard(true);
+                DealDealerCard(true);
+        }
+        else if (state == GameState.Over)
+        {
+            state = GameState.Restarting;
+            StartCoroutine(ResetRound(1.0f));
         }
     }
     
@@ -127,15 +133,15 @@ public class DealerController : MonoBehaviour
             return DealerState.Busted;
     }
 
-    void dealInitialRound()
+    void DealInitialRound()
     {
-        dealPlayerCard();
-        dealDealerCard(true);
-        dealPlayerCard();
-        dealDealerCard(false);
+        DealPlayerCard();
+        DealDealerCard(true);
+        DealPlayerCard();
+        DealDealerCard(false);
     }
     
-    void dealPlayerCard()
+    void DealPlayerCard()
     {
         var nextCard = deckController.GetNextCard().GetComponent<CardController>();
         Vector3 cardPos = new Vector3(playerCardSpot.position.x + (horiSpaceBetweenPlayerCards * playerCards.Count), 
@@ -146,7 +152,7 @@ public class DealerController : MonoBehaviour
         playerCards.Add(nextCard);
     }
     
-    void dealDealerCard(bool showCard)
+    void DealDealerCard(bool showCard)
     {
         var nextCard = deckController.GetNextCard().GetComponent<CardController>();
         Vector3 cardPos = new Vector3(dealerCardSpot.position.x - (horiSpaceBetweenDealerCards * dealerCards.Count), dealerCardSpot.position.y, dealerCardSpot.position.z);
@@ -154,5 +160,21 @@ public class DealerController : MonoBehaviour
         if (showCard)
             nextCard.flip();
         dealerCards.Add(nextCard);
+    }
+    
+    IEnumerator ResetRound(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        
+        foreach (var card in playerCards)
+            Destroy(card.gameObject);
+        playerCards.Clear();        
+        
+        foreach (var card in dealerCards)
+            Destroy(card.gameObject);
+        dealerCards.Clear();
+        
+        DealInitialRound();
+        state = GameState.PlayerTurn;
     }
 }
