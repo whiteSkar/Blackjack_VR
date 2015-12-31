@@ -9,7 +9,9 @@ public class DealerController : MonoBehaviour
         PlayerTurn,
         JustBecameDealerTurn,
         DealerTurn,
-        Over,
+        PlayerWin,
+        DealerWin,
+        Push,
         Restarting,
     };
     
@@ -26,6 +28,7 @@ public class DealerController : MonoBehaviour
     public float horiSpaceBetweenPlayerCards;
     public float VertSpaceBetweenPlayerCards;
     public float horiSpaceBetweenDealerCards;
+    public ChipManager chipManager;
     
     private IList<CardController> dealerCards;
     private IList<CardController> playerCards;
@@ -45,17 +48,18 @@ public class DealerController : MonoBehaviour
     
     void Update()
     {
+        // change to switch
         if (state == GameState.PlayerTurn)
         {
             if (Input.GetMouseButtonDown(0))
             {
                 DealPlayerCard();
                 if (GetPlayerSum() > 21)    // magic number
-                    state = GameState.Over;
+                    state = GameState.DealerWin;
             }
             else if (Input.GetMouseButtonDown(1))
             {
-                state = GameState.JustBecameDealerTurn;              
+                state = GameState.JustBecameDealerTurn;
             }
         }
         else if (state == GameState.JustBecameDealerTurn)
@@ -66,16 +70,61 @@ public class DealerController : MonoBehaviour
         else if (state == GameState.DealerTurn)
         {
             DealerState dealerState = GetDealerState();
-            if (dealerState == DealerState.MustStay || dealerState == DealerState.Busted)
-                state = GameState.Over; // testting purpose
+            if (dealerState == DealerState.MustStay)
+            {
+                int dealerSum = GetDealerSum();
+                int playerSum = GetPlayerSum();
+                
+                if (playerSum < dealerSum)
+                    state = GameState.DealerWin;
+                else if (playerSum > dealerSum)
+                    state = GameState.PlayerWin;
+                else
+                    state = GameState.Push;
+            }
+            else if (dealerState == DealerState.Busted)
+            {
+                state = GameState.PlayerWin;
+            }
             else
+            {
                 DealDealerCard(true);
+            }
         }
-        else if (state == GameState.Over)
+        else if (state == GameState.DealerWin)  // TODO: Add some delay between chip movements
         {
+            chipManager.DealerGetsChips();
+            
             state = GameState.Restarting;
             StartCoroutine(ResetRound(1.0f));
         }
+        else if (state == GameState.PlayerWin)
+        {
+            chipManager.DealerGivesChips(IsPlayerBlackJack());
+            chipManager.PlayerGetsChips();  // shouldn't be in DealerController but PlayerController
+            
+            state = GameState.Restarting;
+            StartCoroutine(ResetRound(1.0f));
+        }
+        else if (state == GameState.Push)
+        {
+            chipManager.PlayerGetsChips();  
+            
+            state = GameState.Restarting;
+            StartCoroutine(ResetRound(1.0f));
+        }
+    }
+    
+    // is it tie when one has blackjack and one has 21?
+    bool IsPlayerBlackJack()
+    {
+        if (playerCards.Count != 2) return false;
+        
+        if ((playerCards[0].getValue() == 11 && playerCards[1].getValue() == 10) || 
+            (playerCards[0].getValue() == 10 && playerCards[1].getValue() == 11))
+            return true;
+        
+        return false;
     }
     
     int GetPlayerSum()
@@ -101,6 +150,18 @@ public class DealerController : MonoBehaviour
     
     DealerState GetDealerState()
     {
+        int sum = GetDealerSum();
+        
+        if (sum < 17)   // magic number
+            return DealerState.MustHit;
+        else if (sum >= 17 && sum <= 21)    // magic number
+            return DealerState.MustStay;
+        else
+            return DealerState.Busted;
+    }
+    
+    int GetDealerSum()
+    {
         int sum = 0;
         bool isSoft = false;
         for (int i = 0; i < dealerCards.Count; i++)
@@ -125,12 +186,7 @@ public class DealerController : MonoBehaviour
             }
         }
         
-        if (sum < 17 || (sum == 17 && isSoft))   // magic number
-            return DealerState.MustHit;
-        else if (sum >= 17 && sum <= 21)    // magic number
-            return DealerState.MustStay;
-        else
-            return DealerState.Busted;
+        return sum;
     }
 
     void DealInitialRound()
@@ -173,6 +229,8 @@ public class DealerController : MonoBehaviour
         foreach (var card in dealerCards)
             Destroy(card.gameObject);
         dealerCards.Clear();
+        
+        chipManager.BetChips(1);    // should not be inside DealerController. should be in something like PlayerController
         
         DealInitialRound();
         state = GameState.PlayerTurn;
