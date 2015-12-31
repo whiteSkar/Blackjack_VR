@@ -49,6 +49,8 @@ public class DealerController : MonoBehaviour
             if (Input.GetMouseButtonDown(0))
             {
                 dealPlayerCard();
+                if (GetPlayerSum() > 21)    // magic number
+                    state = GameState.Over;
             }
             else if (Input.GetMouseButtonDown(1))
             {
@@ -70,6 +72,27 @@ public class DealerController : MonoBehaviour
         }
     }
     
+    int GetPlayerSum()
+    {
+        int sum = 0;
+        for (int i = 0; i < playerCards.Count; i++)
+        {
+            sum += playerCards[i].getValue();
+        }
+        
+        for (int i = 0; i < playerCards.Count && sum > 21; i++)
+        {
+            int cardVal = playerCards[i].getValue();
+            if (cardVal == 11)  // magic number
+            {
+                playerCards[i].setValue(1);   // magic number
+                sum -= 10;  // magic number
+            }
+        }
+        
+        return sum;
+    }
+    
     DealerState GetDealerState()
     {
         int sum = 0;
@@ -79,7 +102,7 @@ public class DealerController : MonoBehaviour
             int cardVal = dealerCards[i].getValue();
             if (cardVal == 11)  // magic number
                 isSoft = true;
-            sum += dealerCards[i].getValue();
+            sum += cardVal;
         }
         
         if (sum > 21 && isSoft)   // magic number
@@ -90,6 +113,7 @@ public class DealerController : MonoBehaviour
                 if (cardVal == 11)  // magic number
                 {
                     dealerCards[i].setValue(1);   // magic number
+                    sum -= 10;  // magic number
                     break;
                 }
             }
