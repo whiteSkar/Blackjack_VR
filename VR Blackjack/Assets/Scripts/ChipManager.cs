@@ -36,13 +36,15 @@ public class ChipManager : MonoBehaviour
     
     public void SelectChipsAbove(GameObject bottomChip)
     {
+        DeselectChips();
+        
         for (int i = 0; i < playerChips.Count; i++)
         {
             if (playerChips[i].transform.position.x == bottomChip.transform.position.x &&
                 playerChips[i].transform.position.y >= bottomChip.transform.position.y &&
                 playerChips[i].transform.position.z == bottomChip.transform.position.z)
             {
-                playerChips[i].GetComponent<MeshRenderer>().material.color = Color.black;
+                playerChips[i].GetComponent<MeshRenderer>().material.color = Color.black;   // put black into constant
             }
         }
     }
@@ -50,7 +52,30 @@ public class ChipManager : MonoBehaviour
     public void DeselectChips()
     {
         foreach (var playerChip in playerChips)
+        {
             playerChip.GetComponent<MeshRenderer>().material.color = originalChipColor;
+            playerChip.GetComponent<CapsuleCollider>().enabled = true;  // was disabled when moving
+        }
+    }
+    
+    public void MoveSelectedChips(Vector3 dest)
+    {
+        float lowestY = -1.0f;
+        for (int i = 0; i < playerChips.Count; i++)
+        {
+            GameObject chip = playerChips[i];
+            if (chip.GetComponent<MeshRenderer>().material.color == Color.black)  // ditto
+            {
+                if (lowestY == -1.0f)
+                    lowestY = chip.transform.position.y;
+                
+                // This chip moves, crosshair repositions, this chip repositions, the crosshair repositions.....so on
+                //  hence, disable collider so that raycast in crosshair doesn't collide with this.
+                // It does also make sense that what I am moving should not be a collidable object.
+                chip.GetComponent<CapsuleCollider>().enabled = false;
+                chip.transform.position = new Vector3(dest.x, (chip.transform.position.y - lowestY) + dest.y, dest.z);
+            }
+        }
     }
     
     public void DealerGetsChips()

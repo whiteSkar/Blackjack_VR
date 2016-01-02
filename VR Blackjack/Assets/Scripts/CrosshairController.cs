@@ -7,29 +7,41 @@ public class CrosshairController : MonoBehaviour
     
     private Vector3 originalScale;
     private GameObject touchingObject;
+    private bool shouldDetectNewObject;
 
     public GameObject GetTouchingObject()
     {
         return touchingObject;
     }
 
+    public void SetShouldDetectNewObject(bool shouldDetectNewObject)
+    {
+        this.shouldDetectNewObject = shouldDetectNewObject;
+    }
+
     void Start()
     {
+        shouldDetectNewObject = true;
         originalScale = transform.localScale;
         touchingObject = null;
     }
 
     void Update()
-    {
-        touchingObject = null;
-        
+    {   
         float distance = playerCamera.farClipPlane * 0.95f;
         RaycastHit hit;
         if (Physics.Raycast(playerCamera.transform.position, playerCamera.transform.rotation * Vector3.forward, out hit))
         {
             distance = hit.distance;
-            touchingObject = hit.collider.gameObject;
+            if (shouldDetectNewObject)
+                touchingObject = hit.collider.gameObject;
         }
+        else
+        {
+            if (shouldDetectNewObject)
+                touchingObject = null;
+        }
+        
         transform.position = playerCamera.transform.position + playerCamera.transform.rotation * Vector3.forward * distance;
         
         // try without this to see the difference with vr on

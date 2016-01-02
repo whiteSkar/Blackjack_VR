@@ -55,9 +55,7 @@ public class DealerController : MonoBehaviour
     {
         // change to switch
         if (state == GameState.PlayerBetting)
-        {
-            chipManager.DeselectChips();
-            
+        {   
             // It makes sense to put the state machine in DealerController because
             //  the dealer is the one who controls the actual game state in real life.
             // However, it does not make sense to use crosshair controller in dealer controller since
@@ -67,6 +65,30 @@ public class DealerController : MonoBehaviour
             if (touchingObject != null && touchingObject.CompareTag("Chip"))
             {
                 chipManager.SelectChipsAbove(touchingObject);
+            }
+            else
+            {
+                chipManager.DeselectChips();
+            }
+            
+            if (Input.GetMouseButton(0))
+            {
+                crosshairController.SetShouldDetectNewObject(false);
+                chipManager.MoveSelectedChips(crosshairController.transform.position);
+            }
+            else if (Input.GetMouseButtonUp(0))
+            {
+                // TODO: when moving is done, stick on chips or bet chip spot rather than the exact mouse up position
+                // should not be able to put chips on any other places rather than those two.
+                crosshairController.SetShouldDetectNewObject(true);
+                chipManager.DeselectChips();
+                
+                // TODO: when putting the chip on chip spot, it should be correctly placed in the data strcuture
+                // and also be removed from player chip data structure
+                
+                // TODO: verify that at least one chip is bet before changing state
+                
+                state = GameState.PlayerTurn;
             }
         }
         else if (state == GameState.PlayerTurn)
