@@ -6,19 +6,29 @@ public class CrosshairController : MonoBehaviour
     public Camera playerCamera;
     
     private Vector3 originalScale;
+    private GameObject touchingObject;
+
+    public GameObject GetTouchingObject()
+    {
+        return touchingObject;
+    }
 
     void Start()
     {
         originalScale = transform.localScale;
+        touchingObject = null;
     }
 
     void Update()
     {
+        touchingObject = null;
+        
         float distance = playerCamera.farClipPlane * 0.95f;
         RaycastHit hit;
         if (Physics.Raycast(playerCamera.transform.position, playerCamera.transform.rotation * Vector3.forward, out hit))
         {
             distance = hit.distance;
+            touchingObject = hit.collider.gameObject;
         }
         transform.position = playerCamera.transform.position + playerCamera.transform.rotation * Vector3.forward * distance;
         

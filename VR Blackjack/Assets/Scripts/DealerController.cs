@@ -6,6 +6,7 @@ public class DealerController : MonoBehaviour
 {
     public enum GameState
     {
+        PlayerBetting,
         PlayerTurn,
         JustBecameDealerTurn,
         DealerTurn,
@@ -36,10 +37,13 @@ public class DealerController : MonoBehaviour
     private float cardDepth = 0.001f;
     private GameState state;
     private float touchStartedTime;
+    private CrosshairController crosshairController;
     
     // Use this for initialization
     void Start()
     {
+        crosshairController = GameObject.FindObjectOfType<CrosshairController>();
+        
         dealerCards = new List<CardController>();
         playerCards = new List<CardController>();
         
@@ -50,9 +54,23 @@ public class DealerController : MonoBehaviour
     void Update()
     {
         // change to switch
-        if (state == GameState.PlayerTurn)
+        if (state == GameState.PlayerBetting)
         {
-            Input.simulateMouseWithTouches = true;
+            chipManager.DeselectChips();
+            
+            // It makes sense to put the state machine in DealerController because
+            //  the dealer is the one who controls the actual game state in real life.
+            // However, it does not make sense to use crosshair controller in dealer controller since
+            //  it's the player who moves the chips not the dealer.
+            // What should I do? hm
+            GameObject touchingObject = crosshairController.GetTouchingObject();
+            if (touchingObject != null && touchingObject.CompareTag("Chip"))
+            {
+                chipManager.SelectChipsAbove(touchingObject);
+            }
+        }
+        else if (state == GameState.PlayerTurn)
+        {
             if (Input.GetMouseButtonDown(0))
             {
                 touchStartedTime = Time.time;
@@ -251,6 +269,6 @@ public class DealerController : MonoBehaviour
         chipManager.BetChips(1);    // should not be inside DealerController. should be in something like PlayerController
         
         DealInitialRound();
-        state = GameState.PlayerTurn;
+        state = GameState.PlayerBetting;
     }
 }
