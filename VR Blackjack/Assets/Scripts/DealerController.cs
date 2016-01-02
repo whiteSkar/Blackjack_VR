@@ -26,15 +26,16 @@ public class DealerController : MonoBehaviour
     public Transform dealerCardSpot;
     public Transform playerCardSpot;
     public float horiSpaceBetweenPlayerCards;
-    public float VertSpaceBetweenPlayerCards;
+    public float vertSpaceBetweenPlayerCards;
     public float horiSpaceBetweenDealerCards;
     public ChipManager chipManager;
+    public float stayHoldTime;
     
     private IList<CardController> dealerCards;
     private IList<CardController> playerCards;
     private float cardDepth = 0.001f;
     private GameState state;
-    
+    private float touchStartedTime;
     
     // Use this for initialization
     void Start()
@@ -51,15 +52,32 @@ public class DealerController : MonoBehaviour
         // change to switch
         if (state == GameState.PlayerTurn)
         {
+            Input.simulateMouseWithTouches = true;
             if (Input.GetMouseButtonDown(0))
             {
-                DealPlayerCard();
-                if (GetPlayerSum() > 21)    // magic number
-                    state = GameState.DealerWin;
+                touchStartedTime = Time.time;
             }
-            else if (Input.GetMouseButtonDown(1))
+            else if (Input.GetMouseButton(0))
             {
-                state = GameState.JustBecameDealerTurn;
+                if (Time.time - touchStartedTime >= stayHoldTime)
+                {
+                    // If the player doesn't lift his finger up until the next round,
+                    // the player will stay immediately. It's okay like this for now.
+                    state = GameState.JustBecameDealerTurn;
+                }
+            }
+            else if (Input.GetMouseButtonUp(0))
+            {
+                if (Time.time - touchStartedTime >= stayHoldTime)
+                {
+                    state = GameState.JustBecameDealerTurn;
+                }
+                else
+                {
+                    DealPlayerCard();
+                    if (GetPlayerSum() > 21)    // magic number
+                        state = GameState.DealerWin;
+                }
             }
         }
         else if (state == GameState.JustBecameDealerTurn)
@@ -202,7 +220,7 @@ public class DealerController : MonoBehaviour
         var nextCard = deckController.GetNextCard().GetComponent<CardController>();
         Vector3 cardPos = new Vector3(playerCardSpot.position.x + (horiSpaceBetweenPlayerCards * playerCards.Count), 
                                       playerCardSpot.position.y + (cardDepth * playerCards.Count),  
-                                      playerCardSpot.position.z + (VertSpaceBetweenPlayerCards * playerCards.Count));
+                                      playerCardSpot.position.z + (vertSpaceBetweenPlayerCards * playerCards.Count));
         nextCard.transform.position = cardPos;
         nextCard.flip();
         playerCards.Add(nextCard);
