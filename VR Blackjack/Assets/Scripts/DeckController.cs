@@ -5,6 +5,7 @@ public class DeckController : MonoBehaviour
 {
     public GameObject[] cards;
     public float spaceBetweenCards;
+    public Vector3 cardScale;
     
     void Start()
     {
@@ -18,6 +19,8 @@ public class DeckController : MonoBehaviour
     public GameObject GetNextCard()
     {
         GameObject nextCard = cards[Random.Range(0, cards.Length)];
-        return GameObject.Instantiate(nextCard);
+        nextCard = GameObject.Instantiate(nextCard);
+        nextCard.transform.localScale = cardScale;
+        return nextCard;
     }
 }
