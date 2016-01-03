@@ -7,6 +7,7 @@ public class DealerController : MonoBehaviour
     public enum GameState
     {
         PlayerBetting,
+        DealerDealing,
         PlayerTurn,
         JustBecameDealerTurn,
         DealerTurn,
@@ -39,7 +40,6 @@ public class DealerController : MonoBehaviour
     private float touchStartedTime;
     private CrosshairController crosshairController;
     
-    // Use this for initialization
     void Start()
     {
         crosshairController = GameObject.FindObjectOfType<CrosshairController>();
@@ -78,18 +78,16 @@ public class DealerController : MonoBehaviour
             }
             else if (Input.GetMouseButtonUp(0))
             {
-                // TODO: when moving is done, stick on chips or bet chip spot rather than the exact mouse up position
-                // should not be able to put chips on any other places rather than those two.
+                // TODO (OPTIONAL) : be able to split player chip towers
                 crosshairController.SetShouldDetectNewObject(true);
-                chipManager.DeselectChips();
-                
-                // TODO: when putting the chip on chip spot, it should be correctly placed in the data strcuture
-                // and also be removed from player chip data structure
-                
-                // TODO: verify that at least one chip is bet before changing state
-                
-                state = GameState.PlayerTurn;
+                if (chipManager.BetSelectedChips()) // should not be inside DealerController. should be in something like PlayerController
+                    state = GameState.DealerDealing;
             }
+        }
+        else if (state == GameState.DealerDealing)
+        {
+            DealInitialCards();
+            state = GameState.PlayerTurn;
         }
         else if (state == GameState.PlayerTurn)
         {
@@ -101,8 +99,6 @@ public class DealerController : MonoBehaviour
             {
                 if (Time.time - touchStartedTime >= stayHoldTime)
                 {
-                    // If the player doesn't lift his finger up until the next round,
-                    // the player will stay immediately. It's okay like this for now.
                     state = GameState.JustBecameDealerTurn;
                 }
             }
@@ -247,7 +243,7 @@ public class DealerController : MonoBehaviour
         return sum;
     }
 
-    void DealInitialRound()
+    void DealInitialCards()
     {
         DealPlayerCard();
         DealDealerCard(true);
@@ -288,9 +284,6 @@ public class DealerController : MonoBehaviour
             Destroy(card.gameObject);
         dealerCards.Clear();
         
-        chipManager.BetChips(1);    // should not be inside DealerController. should be in something like PlayerController
-        
-        DealInitialRound();
         state = GameState.PlayerBetting;
     }
 }

@@ -8,6 +8,7 @@ public class ChipManager : MonoBehaviour
     public Transform playerChipBetSpot;
     public GameObject chip;
     public float spaceBetweenChips;
+    public Color selectedChipColor;
     
     private IList<GameObject> playerChips;
     private IList<GameObject> playerBetChips;
@@ -44,7 +45,7 @@ public class ChipManager : MonoBehaviour
                 playerChips[i].transform.position.y >= bottomChip.transform.position.y &&
                 playerChips[i].transform.position.z == bottomChip.transform.position.z)
             {
-                playerChips[i].GetComponent<MeshRenderer>().material.color = Color.black;   // put black into constant
+                playerChips[i].GetComponent<MeshRenderer>().material.color = selectedChipColor;
             }
         }
     }
@@ -58,13 +59,19 @@ public class ChipManager : MonoBehaviour
         }
     }
     
+    public void DeselectChip(GameObject chip)
+    {
+        chip.GetComponent<MeshRenderer>().material.color = originalChipColor;
+        chip.GetComponent<CapsuleCollider>().enabled = true;  // was disabled when moving
+    }
+    
     public void MoveSelectedChips(Vector3 dest)
     {
         float lowestY = -1.0f;
         for (int i = 0; i < playerChips.Count; i++)
         {
             GameObject chip = playerChips[i];
-            if (chip.GetComponent<MeshRenderer>().material.color == Color.black)  // ditto
+            if (chip.GetComponent<MeshRenderer>().material.color == selectedChipColor)
             {
                 if (lowestY == -1.0f)
                     lowestY = chip.transform.position.y;
@@ -108,7 +115,10 @@ public class ChipManager : MonoBehaviour
     {
         if (playerBetChips.Count <= 0) return;
         
-        Vector3 chipPos = playerChips[playerChips.Count-1].transform.position;        
+        Vector3 chipPos = playerChipSpot.position;
+        if (playerChips.Count > 0)
+            chipPos = playerChips[playerChips.Count-1].transform.position;
+                 
         foreach (var chip in playerBetChips)
         {
             chipPos = new Vector3(chipPos.x, chipPos.y + chip.GetComponent<MeshRenderer>().bounds.size.y + spaceBetweenChips, chipPos.z);
@@ -119,16 +129,27 @@ public class ChipManager : MonoBehaviour
         playerBetChips.Clear();
     }
     
-    public void BetChips(int numChips)
+    public bool BetSelectedChips()
     {
-        Vector3 chipPos = playerChipBetSpot.position;
-        for (int i = 0; i < numChips && playerChips.Count > 0; i++)
+        bool isThereAtLeastOneChipSelected = false;
+        
+        Vector3 chipDestPos = playerChipBetSpot.position;
+        for (int i = playerChips.Count - 1; i >= 0; i--)
         {
-            GameObject chipObject = playerChips[playerChips.Count-1].gameObject;
-            playerChips.RemoveAt(playerChips.Count - 1);
-            chipObject.transform.position = chipPos;
-            chipPos = new Vector3(chipPos.x, chipPos.y + chipObject.GetComponent<MeshRenderer>().bounds.size.y + spaceBetweenChips, chipPos.z);
-            playerBetChips.Add(chipObject);
+            GameObject chip = playerChips[i];
+            if (chip.GetComponent<MeshRenderer>().material.color == selectedChipColor)
+            {
+                playerChips.RemoveAt(i);
+                chip.transform.position = chipDestPos;
+                chipDestPos = new Vector3(chipDestPos.x, 
+                                          chipDestPos.y + chip.GetComponent<MeshRenderer>().bounds.size.y + spaceBetweenChips, 
+                                          chipDestPos.z);
+                playerBetChips.Add(chip);
+                DeselectChip(chip);
+                isThereAtLeastOneChipSelected = true;
+            }
         }
+        
+        return isThereAtLeastOneChipSelected;
     }
 }
