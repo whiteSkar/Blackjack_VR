@@ -8,7 +8,6 @@ public class DealerController : MonoBehaviour
     public enum GameState
     {
         PlayerBetting,
-        DealerShouldDeal,
         DealerDealing,
         PlayerTurn,
         JustBecameDealerTurn,
@@ -16,7 +15,6 @@ public class DealerController : MonoBehaviour
         PlayerWin,
         DealerWin,
         Push,
-        Restarting,
     };
     
     public enum DealerState
@@ -49,130 +47,152 @@ public class DealerController : MonoBehaviour
         dealerCards = new List<CardController>();
         playerCards = new List<CardController>();
         
-        state = GameState.Restarting;
-        StartCoroutine(ResetRound(0.0f));
+        ResetRound();
+        StartCoroutine(StateMachine());
     }
     
-    void Update()
+    IEnumerator StateMachine()  // ugh...
     {
-        // change to switch
-        if (state == GameState.PlayerBetting)
-        {   
-            // It makes sense to put the state machine in DealerController because
-            //  the dealer is the one who controls the actual game state in real life.
-            // However, it does not make sense to use crosshair controller in dealer controller since
-            //  it's the player who moves the chips not the dealer.
-            // What should I do? hm
-            GameObject touchingObject = crosshairController.GetTouchingObject();
-            if (touchingObject != null && touchingObject.CompareTag("Chip"))
-            {
-                chipManager.SelectChipsAbove(touchingObject);
-            }
-            else
-            {
-                chipManager.DeselectChips();
-            }
-            
-            if (Input.GetMouseButton(0))
-            {
-                crosshairController.SetShouldDetectNewObject(false);
-                chipManager.MoveSelectedChips(crosshairController.transform.position);
-            }
-            else if (Input.GetMouseButtonUp(0))
-            {
-                // TODO (OPTIONAL) : be able to split player chip towers
-                crosshairController.SetShouldDetectNewObject(true);
-                if (chipManager.BetSelectedChips()) // should not be inside DealerController. should be in something like PlayerController
-                    state = GameState.DealerShouldDeal;
-            }
-        }
-        else if (state == GameState.DealerShouldDeal)
+        yield return new WaitForEndOfFrame();
+        
+        while (true)
         {
-            StartCoroutine(DealInitialCards(0.1f, () => state = GameState.PlayerTurn));
-            state = GameState.DealerDealing;
-        }
-        else if (state == GameState.DealerDealing)
-        {
-            // Dealer is handing out cards
-        }
-        else if (state == GameState.PlayerTurn)
-        {
-            if (Input.GetMouseButtonDown(0))
-            {
-                touchStartedTime = Time.time;
-            }
-            else if (Input.GetMouseButton(0))
-            {
-                if (Time.time - touchStartedTime >= stayHoldTime)
+            // change to switch
+            if (state == GameState.PlayerBetting)
+            {   
+                // It makes sense to put the state machine in DealerController because
+                //  the dealer is the one who controls the actual game state in real life.
+                // However, it does not make sense to use crosshair controller in dealer controller since
+                //  it's the player who moves the chips not the dealer.
+                // What should I do? hm
+                GameObject touchingObject = crosshairController.GetTouchingObject();
+                if (touchingObject != null && touchingObject.CompareTag("Chip"))
                 {
-                    state = GameState.JustBecameDealerTurn;
-                }
-            }
-            else if (Input.GetMouseButtonUp(0))
-            {
-                if (Time.time - touchStartedTime >= stayHoldTime)
-                {
-                    state = GameState.JustBecameDealerTurn;
+                    chipManager.SelectChipsAbove(touchingObject);
                 }
                 else
                 {
-                    DealPlayerCard();
-                    if (GetPlayerSum() > 21)    // magic number
-                        state = GameState.DealerWin;
+                    chipManager.DeselectChips();
                 }
-            }
-        }
-        else if (state == GameState.JustBecameDealerTurn)
-        {
-            dealerCards[dealerCards.Count-1].flip();
-            state = GameState.DealerTurn;
-        }
-        else if (state == GameState.DealerTurn)
-        {
-            DealerState dealerState = GetDealerState();
-            if (dealerState == DealerState.MustStay)
-            {
-                int dealerSum = GetDealerSum();
-                int playerSum = GetPlayerSum();
                 
-                if (playerSum < dealerSum)
-                    state = GameState.DealerWin;
-                else if (playerSum > dealerSum)
+                if (Input.GetMouseButton(0))
+                {
+                    crosshairController.SetShouldDetectNewObject(false);
+                    chipManager.MoveSelectedChips(crosshairController.transform.position);
+                }
+                else if (Input.GetMouseButtonUp(0))
+                {
+                    // TODO (OPTIONAL) : be able to split player chip towers
+                    crosshairController.SetShouldDetectNewObject(true);
+                    if (chipManager.BetSelectedChips()) // should not be inside DealerController. should be in something like PlayerController
+                        state = GameState.DealerDealing;
+                }
+                
+                yield return null;
+            }
+            else if (state == GameState.DealerDealing)
+            {
+                float delay = 0.25f;
+                
+                DealPlayerCard();
+                yield return new WaitForSeconds(delay);
+                
+                DealDealerCard(true);
+                yield return new WaitForSeconds(delay);
+                
+                DealPlayerCard();
+                yield return new WaitForSeconds(delay);
+                
+                DealDealerCard(false);
+                yield return new WaitForSeconds(delay);
+                
+                state = GameState.PlayerTurn;
+            }
+            else if (state == GameState.PlayerTurn)
+            {
+                if (Input.GetMouseButtonDown(0))
+                {
+                    touchStartedTime = Time.time;
+                }
+                else if (Input.GetMouseButton(0))
+                {
+                    if (Time.time - touchStartedTime >= stayHoldTime)
+                    {
+                        state = GameState.JustBecameDealerTurn;
+                    }
+                }
+                else if (Input.GetMouseButtonUp(0))
+                {
+                    if (Time.time - touchStartedTime >= stayHoldTime)
+                    {
+                        state = GameState.JustBecameDealerTurn;
+                    }
+                    else
+                    {
+                        DealPlayerCard();
+                        if (GetPlayerSum() > 21)    // magic number
+                            state = GameState.DealerWin;
+                    }
+                }
+                
+                yield return null;
+            }
+            else if (state == GameState.JustBecameDealerTurn)
+            {
+                dealerCards[dealerCards.Count-1].flip();
+                state = GameState.DealerTurn;
+                
+                yield return new WaitForSeconds(0.5f);
+            }
+            else if (state == GameState.DealerTurn)
+            {
+                DealerState dealerState = GetDealerState();
+                if (dealerState == DealerState.MustStay)
+                {
+                    int dealerSum = GetDealerSum();
+                    int playerSum = GetPlayerSum();
+                    
+                    if (playerSum < dealerSum)
+                        state = GameState.DealerWin;
+                    else if (playerSum > dealerSum)
+                        state = GameState.PlayerWin;
+                    else
+                        state = GameState.Push;
+                }
+                else if (dealerState == DealerState.Busted)
+                {
                     state = GameState.PlayerWin;
+                }
                 else
-                    state = GameState.Push;
+                {
+                    DealDealerCard(true);
+                    yield return new WaitForSeconds(0.5f);
+                }
             }
-            else if (dealerState == DealerState.Busted)
+            else if (state == GameState.DealerWin)
             {
-                state = GameState.PlayerWin;
+                chipManager.DealerGetsChips();
+                yield return new WaitForSeconds(0.5f);
+                
+                ResetRound();
             }
-            else
+            else if (state == GameState.PlayerWin)
             {
-                StartCoroutine(DealDealerCard(true, 0.1f, () => state = GameState.DealerTurn));
-                state = GameState.DealerDealing;
+                chipManager.DealerGivesChips(IsPlayerBlackJack());
+                yield return new WaitForSeconds(1.0f);
+                
+                chipManager.PlayerGetsChips();  // shouldn't be in DealerController but PlayerController
+                yield return new WaitForSeconds(0.5f);
+                
+                ResetRound();
             }
-        }
-        else if (state == GameState.DealerWin)  // TODO: Add some delay between chip movements
-        {
-            chipManager.DealerGetsChips();
-            
-            state = GameState.Restarting;
-            StartCoroutine(ResetRound(1.0f));
-        }
-        else if (state == GameState.PlayerWin)
-        {
-            chipManager.DealerGivesChips(IsPlayerBlackJack());
-            chipManager.PlayerGetsChips();  // shouldn't be in DealerController but PlayerController
-            
-            state = GameState.Restarting;
-            StartCoroutine(ResetRound(1.0f));
-        }
-        else if (state == GameState.Push)
-        {
-            chipManager.PlayerGetsChips();  
-            
-            state = GameState.Restarting;
-            StartCoroutine(ResetRound(1.0f));
+            else if (state == GameState.Push)
+            {
+                chipManager.PlayerGetsChips();  
+                yield return new WaitForSeconds(0.5f);
+                
+                ResetRound();
+            }
         }
     }
     
@@ -250,24 +270,6 @@ public class DealerController : MonoBehaviour
         return sum;
     }
 
-    IEnumerator DealInitialCards(float delay, Action callback)
-    {
-        DealPlayerCard();
-        yield return new WaitForSeconds(delay);
-        
-        StartCoroutine(DealDealerCard(true, 0.0f, null));
-        yield return new WaitForSeconds(delay);
-        
-        DealPlayerCard();
-        yield return new WaitForSeconds(delay);
-        
-        StartCoroutine(DealDealerCard(false, 0.0f, null));
-        yield return new WaitForSeconds(delay);
-
-        if (callback != null)
-            callback();
-    }
-    
     void DealPlayerCard()
     {
         var nextCard = deckController.GetNextCard().GetComponent<CardController>();
@@ -279,11 +281,8 @@ public class DealerController : MonoBehaviour
         playerCards.Add(nextCard);
     }
     
-    IEnumerator DealDealerCard(bool showCard, float delay, Action callback)
-    {
-        if (delay > 0.0f)
-            yield return new WaitForSeconds(delay);
-        
+    void DealDealerCard(bool showCard)
+    {       
         var nextCard = deckController.GetNextCard().GetComponent<CardController>();
         Vector3 cardPos = new Vector3(dealerCardSpot.position.x - (horiSpaceBetweenDealerCards * dealerCards.Count), 
                                       dealerCardSpot.position.y + (cardDepth * dealerCards.Count), 
@@ -292,16 +291,10 @@ public class DealerController : MonoBehaviour
         if (showCard)
             nextCard.flip();
         dealerCards.Add(nextCard);
-        
-        if (callback != null)
-            callback();
     }
     
-    IEnumerator ResetRound(float delay)
-    {
-        if (delay > 0.0f)
-            yield return new WaitForSeconds(delay);
-        
+    void ResetRound()
+    {        
         foreach (var card in playerCards)
             Destroy(card.gameObject);
         playerCards.Clear();        
