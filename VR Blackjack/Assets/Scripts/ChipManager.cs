@@ -14,7 +14,6 @@ public class ChipManager : MonoBehaviour
     private IList<GameObject> playerBetChips;
     private Color originalChipColor;
 
-    // Use this for initialization
     void Start()
     {
         originalChipColor = chip.GetComponent<MeshRenderer>().sharedMaterial.color;

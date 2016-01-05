@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -7,6 +8,7 @@ public class DealerController : MonoBehaviour
     public enum GameState
     {
         PlayerBetting,
+        DealerShouldDeal,
         DealerDealing,
         PlayerTurn,
         JustBecameDealerTurn,
@@ -81,13 +83,17 @@ public class DealerController : MonoBehaviour
                 // TODO (OPTIONAL) : be able to split player chip towers
                 crosshairController.SetShouldDetectNewObject(true);
                 if (chipManager.BetSelectedChips()) // should not be inside DealerController. should be in something like PlayerController
-                    state = GameState.DealerDealing;
+                    state = GameState.DealerShouldDeal;
             }
+        }
+        else if (state == GameState.DealerShouldDeal)
+        {
+            StartCoroutine(DealInitialCards(0.1f, () => state = GameState.PlayerTurn));
+            state = GameState.DealerDealing;
         }
         else if (state == GameState.DealerDealing)
         {
-            DealInitialCards();
-            state = GameState.PlayerTurn;
+            // Dealer is handing out cards
         }
         else if (state == GameState.PlayerTurn)
         {
@@ -142,7 +148,8 @@ public class DealerController : MonoBehaviour
             }
             else
             {
-                DealDealerCard(true);
+                StartCoroutine(DealDealerCard(true, 0.1f, () => state = GameState.DealerTurn));
+                state = GameState.DealerDealing;
             }
         }
         else if (state == GameState.DealerWin)  // TODO: Add some delay between chip movements
@@ -243,12 +250,22 @@ public class DealerController : MonoBehaviour
         return sum;
     }
 
-    void DealInitialCards()
+    IEnumerator DealInitialCards(float delay, Action callback)
     {
         DealPlayerCard();
-        DealDealerCard(true);
+        yield return new WaitForSeconds(delay);
+        
+        StartCoroutine(DealDealerCard(true, 0.0f, null));
+        yield return new WaitForSeconds(delay);
+        
         DealPlayerCard();
-        DealDealerCard(false);
+        yield return new WaitForSeconds(delay);
+        
+        StartCoroutine(DealDealerCard(false, 0.0f, null));
+        yield return new WaitForSeconds(delay);
+
+        if (callback != null)
+            callback();
     }
     
     void DealPlayerCard()
@@ -262,19 +279,28 @@ public class DealerController : MonoBehaviour
         playerCards.Add(nextCard);
     }
     
-    void DealDealerCard(bool showCard)
+    IEnumerator DealDealerCard(bool showCard, float delay, Action callback)
     {
+        if (delay > 0.0f)
+            yield return new WaitForSeconds(delay);
+        
         var nextCard = deckController.GetNextCard().GetComponent<CardController>();
-        Vector3 cardPos = new Vector3(dealerCardSpot.position.x - (horiSpaceBetweenDealerCards * dealerCards.Count), dealerCardSpot.position.y, dealerCardSpot.position.z);
+        Vector3 cardPos = new Vector3(dealerCardSpot.position.x - (horiSpaceBetweenDealerCards * dealerCards.Count), 
+                                      dealerCardSpot.position.y + (cardDepth * dealerCards.Count), 
+                                      dealerCardSpot.position.z);
         nextCard.transform.position = cardPos;
         if (showCard)
             nextCard.flip();
         dealerCards.Add(nextCard);
+        
+        if (callback != null)
+            callback();
     }
     
     IEnumerator ResetRound(float delay)
     {
-        yield return new WaitForSeconds(delay);
+        if (delay > 0.0f)
+            yield return new WaitForSeconds(delay);
         
         foreach (var card in playerCards)
             Destroy(card.gameObject);
