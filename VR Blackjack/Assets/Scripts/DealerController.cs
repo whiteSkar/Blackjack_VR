@@ -40,6 +40,11 @@ public class DealerController : MonoBehaviour
     private float touchStartedTime;
     private CrosshairController crosshairController;
     
+    public GameState GetGameState()
+    {
+        return state;
+    }
+    
     void Start()
     {
         crosshairController = GameObject.FindObjectOfType<CrosshairController>();

@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
 public class ChipManager : MonoBehaviour
@@ -21,6 +22,26 @@ public class ChipManager : MonoBehaviour
         playerChips = new List<GameObject>();
         playerBetChips = new List<GameObject>();
         
+        GivePlayerChips();
+        StartCoroutine(GivePlayerChipsIfUsedAll());
+    }
+    
+    IEnumerator GivePlayerChipsIfUsedAll()  // PlayerController should request for more chips. Rather than here
+    {
+        while (true)
+        {
+            yield return new WaitForSeconds(2.0f);
+            
+            // TODO: make a free chip machine on the right. 
+            // When the player looks at it, then give,
+            if (playerChips.Count == 0 && 
+                GameObject.FindObjectOfType<DealerController>().GetGameState() == DealerController.GameState.PlayerBetting) 
+                GivePlayerChips();
+        }
+    }
+    
+    void GivePlayerChips()
+    {
         int numChips = buyInMoney / chip.GetComponent<ChipController>().GetValue();
         Vector3 chipPos = playerChipSpot.position;
         
