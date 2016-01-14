@@ -14,9 +14,11 @@ public class ChipManager : MonoBehaviour
     private IList<GameObject> playerChips;
     private IList<GameObject> playerBetChips;
     private Color originalChipColor;
+    private CrosshairController crosshairController;
 
     void Start()
     {
+        crosshairController = GameObject.FindObjectOfType<CrosshairController>();
         originalChipColor = chip.GetComponent<MeshRenderer>().sharedMaterial.color;
         
         playerChips = new List<GameObject>();
@@ -30,12 +32,11 @@ public class ChipManager : MonoBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(2.0f);
-            
-            // TODO: make a free chip machine on the right. 
-            // When the player looks at it, then give,
+            yield return new WaitForSeconds(1.0f);
+
             if (playerChips.Count == 0 && 
-                GameObject.FindObjectOfType<DealerController>().GetGameState() == DealerController.GameState.PlayerBetting) 
+                GameObject.FindObjectOfType<DealerController>().GetGameState() == DealerController.GameState.PlayerBetting &&
+                crosshairController.GetTouchingObject().CompareTag("FreeChipMachine")) 
                 GivePlayerChips();
         }
     }
